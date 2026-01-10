@@ -25,10 +25,6 @@ impl fmt::Write for DebugWriter {
     }
 }
 
-lazy_static! {
-    pub static ref WRITER: Mutex<DebugWriter> = Mutex::new(DebugWriter {});
-}
-
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
