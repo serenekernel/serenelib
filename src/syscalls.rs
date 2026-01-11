@@ -1,5 +1,7 @@
 use core::arch::asm;
 
+use crate::ipc::{Handle, IpcMessageHeader};
+
 #[inline(always)]
 #[doc(hidden)]
 pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize) -> usize {
@@ -28,11 +30,18 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
 const SYS_EXIT: usize = 1;
 const SYS_CAP_PORT_GRANT: usize = 32;
 
+const SYS_ENDPOINT_CREATE: usize = 1;
+const SYS_ENDPOINT_DESTROY: usize = 65;
+const SYS_ENDPOINT_SEND: usize = 66;
+const SYS_ENDPOINT_RECEIVE: usize = 67;
+
 #[repr(isize)]
 #[derive(Debug, Copy, Clone)]
 pub enum SyscallError {
     InvalidArgument = -1,
     InvalidSyscallNumber = -2,
+    InvalidHandle = -3,
+    WouldBlock = -4,
 }
 
 #[inline(always)]
@@ -61,4 +70,63 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
         0,
     );
     decode_ret(ret).map(|_| ())
+}
+
+pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
+    let mut handle: u64 = 0;
+    let ret = raw_syscall(
+        SYS_ENDPOINT_CREATE,
+        &mut handle as *mut u64 as usize,
+        0,
+        0,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|_| Handle(handle))
+}
+
+pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
+    let ret = raw_syscall(SYS_ENDPOINT_DESTROY, handle.0 as usize, 0, 0, 0, 0);
+    decode_ret(ret).map(|_| ())
+}
+
+pub fn sys_endpoint_send(handle: Handle, payload: &[u8]) -> Result<(), SyscallError> {
+    let ret = raw_syscall(
+        SYS_ENDPOINT_SEND,
+        handle.0 as usize,
+        payload.as_ptr() as usize,
+        payload.len(),
+        0,
+        0,
+    );
+    decode_ret(ret).map(|_| ())
+}
+
+/// Receive a message from an endpoint.
+///
+/// Returns a pointer to the IPC message header and the total size of the allocation
+/// (including the header and payload).
+///
+/// # Safety
+/// The returned pointer is kernel-allocated memory that must be freed by calling
+/// `sys_endpoint_free_message` when done. The pointer is valid for the returned size.
+pub fn sys_endpoint_receive(
+    handle: Handle,
+) -> Result<(*mut IpcMessageHeader, usize), SyscallError> {
+    let mut out_payload: u64 = 0;
+    let mut out_payload_length: u64 = 0;
+    let ret = raw_syscall(
+        SYS_ENDPOINT_RECEIVE,
+        handle.0 as usize,
+        &mut out_payload as *mut u64 as usize,
+        &mut out_payload_length as *mut u64 as usize,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|_| {
+        (
+            out_payload as *mut IpcMessageHeader,
+            out_payload_length as usize,
+        )
+    })
 }
