@@ -79,7 +79,7 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
 }
 
 // @maybetemp
-pub fn sys_cap_port_grant() -> Result<Handle, SyscallError> {
+pub fn sys_cap_ipc_discovery() -> Result<Handle, SyscallError> {
     let ret = raw_syscall(
         SYS_CAP_IPC_DISCOVERY,
         0,
