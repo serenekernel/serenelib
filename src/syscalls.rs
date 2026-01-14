@@ -28,12 +28,16 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
 }
 
 const SYS_EXIT: usize = 1;
+
 const SYS_CAP_PORT_GRANT: usize = 32;
 
-const SYS_ENDPOINT_CREATE: usize = 1;
+const SYS_WAIT_FOR: usize = 48;
+
+const SYS_ENDPOINT_CREATE: usize = 64;
 const SYS_ENDPOINT_DESTROY: usize = 65;
 const SYS_ENDPOINT_SEND: usize = 66;
 const SYS_ENDPOINT_RECEIVE: usize = 67;
+const SYS_ENDPOINT_FREE_MESSAGE: usize = 68;
 
 #[repr(isize)]
 #[derive(Debug, Copy, Clone)]
@@ -90,6 +94,8 @@ pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
     decode_ret(ret).map(|_| ())
 }
 
+/// Send a message to an endpoint.
+/// `payload` is the message payload to send. The payload is copied into kernel memory.
 pub fn sys_endpoint_send(handle: Handle, payload: &[u8]) -> Result<(), SyscallError> {
     let ret = raw_syscall(
         SYS_ENDPOINT_SEND,
@@ -129,4 +135,25 @@ pub fn sys_endpoint_receive(
             out_payload_length as usize,
         )
     })
+}
+
+/// Free a received IPC message.
+/// # Safety
+/// The `message` pointer must be a valid pointer returned by `sys_endpoint_receive`.
+pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Result<(), SyscallError> {
+    let ret = raw_syscall(
+        SYS_ENDPOINT_FREE_MESSAGE, // Free message syscall
+        message as usize,
+        0,
+        0,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|_| ())
+}
+
+/// Wait for a handle to become ready.
+pub fn sys_wait_for(handle: Handle) -> Result<(), SyscallError> {
+    let ret = raw_syscall(SYS_WAIT_FOR, handle.0 as usize, 0, 0, 0, 0);
+    decode_ret(ret).map(|_| ())
 }
