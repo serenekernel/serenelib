@@ -5,8 +5,8 @@ use crate::ipc::{Handle, IpcMessageHeader};
 #[inline(always)]
 #[doc(hidden)]
 pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize) -> u128 {
-    let ret: usize;
-    let ret2: usize;
+    let lo: u64;
+    let hi: u64;
 
     unsafe {
         asm!(
@@ -17,8 +17,8 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
             in("r10") a3,
             in("r8")  a4,
             in("r9")  a5,
-            lateout("rax") ret,
-            lateout("rbx") ret2,
+            lateout("rax") lo,
+            lateout("rdx") hi,
             lateout("rcx") _,
             lateout("r11") _,
             lateout("r15") _,
@@ -27,7 +27,7 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
     }
 
 
-    ((ret as u128) | ((ret2 as u128) << 64))
+    ((hi as u128) << 64) | (lo as u128)
 }
 
 const SYS_EXIT: usize = 1;
