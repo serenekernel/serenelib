@@ -31,6 +31,7 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
 const SYS_EXIT: usize = 1;
 
 const SYS_CAP_PORT_GRANT: usize = 32;
+const SYS_CAP_IPC_DISCOVERY: usize = 33;
 
 const SYS_WAIT_FOR: usize = 48;
 
@@ -75,6 +76,19 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
         0,
     );
     decode_ret(ret).map(|_| ())
+}
+
+// @maybetemp
+pub fn sys_cap_port_grant() -> Result<Handle, SyscallError> {
+    let ret = raw_syscall(
+        SYS_CAP_IPC_DISCOVERY,
+        0,
+        0,
+        0,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|handle_value| Handle(handle_value as u64))
 }
 
 pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
