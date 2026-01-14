@@ -4,19 +4,21 @@ use crate::ipc::{Handle, IpcMessageHeader};
 
 #[inline(always)]
 #[doc(hidden)]
-pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize) -> usize {
+pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize) -> u128 {
     let ret: usize;
+    let ret2: usize;
 
     unsafe {
         asm!(
             "syscall",
-            inlateout("rdi") a0 => _,
-            inlateout("rsi") a1 => _,
-            inlateout("rdx") a2 => _,
-            inlateout("r10") a3 => _,
-            inlateout("r8")  a4 => _,
-            inlateout("r9")  a5 => _,
+            in("rdi") a0,
+            in("rsi") a1,
+            in("rdx") a2,
+            in("r10") a3,
+            in("r8")  a4,
+            in("r9")  a5,
             lateout("rax") ret,
+            lateout("rbx") ret2,
             lateout("rcx") _,
             lateout("r11") _,
             lateout("r15") _,
@@ -25,7 +27,7 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
     }
 
 
-    ret
+    ((ret as u128) | ((ret2 as u128) << 64))
 }
 
 const SYS_EXIT: usize = 1;
@@ -52,12 +54,12 @@ pub enum SyscallError {
 
 #[inline(always)]
 #[doc(hidden)]
-fn decode_ret(ret: usize) -> Result<usize, SyscallError> {
+fn decode_ret(ret: u128) -> Result<usize, SyscallError> {
     let v = ret as isize;
     if v < 0 {
         Err(unsafe { core::mem::transmute(v) })
     } else {
-        Ok(ret)
+        Ok(ret as usize)
     }
 }
 
