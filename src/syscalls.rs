@@ -10,19 +10,20 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
     unsafe {
         asm!(
             "syscall",
-            in("rdi") a0,
-            in("rsi") a1,
-            in("rdx") a2,
-            in("r10") a3,
-            in("r8")  a4,
-            in("r9")  a5,
+            inlateout("rdi") a0 => _,
+            inlateout("rsi") a1 => _,
+            inlateout("rdx") a2 => _,
+            inlateout("r10") a3 => _,
+            inlateout("r8")  a4 => _,
+            inlateout("r9")  a5 => _,
             lateout("rax") ret,
-            lateout("r15") _,
             lateout("rcx") _,
             lateout("r11") _,
+            lateout("r15") _,
             options(nostack),
         );
     }
+
 
     ret
 }
@@ -77,16 +78,15 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
 }
 
 pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
-    let mut handle: u64 = 0;
     let ret = raw_syscall(
         SYS_ENDPOINT_CREATE,
-        &mut handle as *mut u64 as usize,
+        0,
         0,
         0,
         0,
         0,
     );
-    decode_ret(ret).map(|_| Handle(handle))
+    decode_ret(ret).map(|handle_value| Handle(handle_value as u64))
 }
 
 pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
@@ -119,21 +119,23 @@ pub fn sys_endpoint_send(handle: Handle, payload: &[u8]) -> Result<(), SyscallEr
 pub fn sys_endpoint_receive(
     handle: Handle,
 ) -> Result<(*mut IpcMessageHeader, usize), SyscallError> {
-    let mut out_payload: u64 = 0;
-    let mut out_payload_length: u64 = 0;
     let ret = raw_syscall(
         SYS_ENDPOINT_RECEIVE,
         handle.0 as usize,
-        &mut out_payload as *mut u64 as usize,
-        &mut out_payload_length as *mut u64 as usize,
+        0,
+        0,
         0,
         0,
     );
-    decode_ret(ret).map(|_| {
-        (
-            out_payload as *mut IpcMessageHeader,
-            out_payload_length as usize,
-        )
+    decode_ret(ret).map(|ptr_value| {
+        let message_ptr = ptr_value as *mut IpcMessageHeader;
+        // Safety: we trust the kernel to return a valid pointer
+        // User must read the length field from the message structure
+        let total_size = unsafe { 
+            let length = (*message_ptr).length as usize;
+            core::mem::size_of::<IpcMessageHeader>() + length
+        };
+        (message_ptr, total_size)
     })
 }
 
