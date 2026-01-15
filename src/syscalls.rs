@@ -1,5 +1,6 @@
 use core::arch::asm;
 use crate::ipc::{Handle, IpcMessageHeader};
+use bitflags::bitflags;
 
 #[inline(always)]
 #[doc(hidden)]
@@ -184,35 +185,22 @@ pub fn sys_wait_for(handle: Handle) -> Result<(), SyscallError> {
     decode_ret(ret).map(|_| ())
 }
 
-#[repr(u64)]
-#[derive(Debug, Copy, Clone)]
-pub enum MemObjPerms {
-    Read = 1 << 0,
-    Write = 1 << 1,
-    Exec = 1 << 2,
-}
-
-impl MemObjPerms {
-    pub fn as_u64(self) -> u64 {
-        self as u64
-    }
-    
-    pub fn combine(perms: &[MemObjPerms]) -> u64 {
-        perms.iter().fold(0u64, |acc, p| acc | p.as_u64())
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug)]
+    pub struct MemObjPerms: u64 {
+        const READ  = 1 << 0;
+        const WRITE = 1 << 1;
+        const EXEC  = 1 << 2;
     }
 }
 
-/// Memory object mapping flags
-#[repr(u64)]
-#[derive(Debug, Copy, Clone)]
-pub enum MemObjMapFlags {
-    None = 0,
-    Fixed = 1 << 0,  // Map at exact address
-}
-
-impl MemObjMapFlags {
-    pub fn as_u64(self) -> u64 {
-        self as u64
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug)]
+    pub struct MemObjMapFlags: u64 {
+        const NONE = 0;
+        const FIXED = 1 << 0;  // Map at exact address
     }
 }
 
@@ -230,11 +218,11 @@ pub fn sys_process_create_empty() -> Result<Handle, SyscallError> {
 }
 
 /// Create a memory object with the given size and permissions
-pub fn sys_memobj_create(size: usize, perms: u64) -> Result<Handle, SyscallError> {
+pub fn sys_memobj_create(size: usize, perms: MemObjPerms) -> Result<Handle, SyscallError> {
     let ret = raw_syscall(
         SYS_MEMOBJ_CREATE,
         size,
-        perms as usize,
+        perms.bits() as usize,
         0,
         0,
         0,
@@ -256,8 +244,8 @@ pub fn sys_map(
         process.0 as usize,
         memobj.0 as usize,
         vaddr_hint.unwrap_or(0) as usize,
-        perms.as_u64() as usize,
-        flags.as_u64() as usize,
+        perms.bits() as usize,
+        flags.bits() as usize,
     );
     decode_ret(ret)
 }
