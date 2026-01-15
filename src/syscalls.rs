@@ -1,5 +1,4 @@
 use core::arch::asm;
-
 use crate::ipc::{Handle, IpcMessageHeader};
 
 #[inline(always)]
@@ -32,6 +31,12 @@ pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: us
 
 const SYS_EXIT: usize = 1;
 
+const SYS_PROCESS_CREATE_EMPTY: usize = 16;
+const SYS_START: usize = 17;
+const SYS_MEMOBJ_CREATE: usize = 18;
+const SYS_MAP: usize = 19;
+const SYS_COPY_TO: usize = 20;
+
 const SYS_CAP_PORT_GRANT: usize = 32;
 const SYS_CAP_IPC_DISCOVERY: usize = 33;
 
@@ -50,6 +55,9 @@ pub enum SyscallError {
     InvalidSyscallNumber = -2,
     InvalidHandle = -3,
     WouldBlock = -4,
+    PermissionDenied = -5,
+    OutOfMemory = -6,
+    AddressInUse = -7,
 }
 
 #[inline(always)]
@@ -160,7 +168,7 @@ pub fn sys_endpoint_receive(
 /// The `message` pointer must be a valid pointer returned by `sys_endpoint_receive`.
 pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Result<(), SyscallError> {
     let ret = raw_syscall(
-        SYS_ENDPOINT_FREE_MESSAGE, // Free message syscall
+        SYS_ENDPOINT_FREE_MESSAGE,
         message as usize,
         0,
         0,
@@ -173,5 +181,114 @@ pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Resul
 /// Wait for a handle to become ready.
 pub fn sys_wait_for(handle: Handle) -> Result<(), SyscallError> {
     let ret = raw_syscall(SYS_WAIT_FOR, handle.0 as usize, 0, 0, 0, 0);
+    decode_ret(ret).map(|_| ())
+}
+
+#[repr(u64)]
+#[derive(Debug, Copy, Clone)]
+pub enum MemObjPerms {
+    Read = 1 << 0,
+    Write = 1 << 1,
+    Exec = 1 << 2,
+}
+
+impl MemObjPerms {
+    pub fn as_u64(self) -> u64 {
+        self as u64
+    }
+    
+    pub fn combine(perms: &[MemObjPerms]) -> u64 {
+        perms.iter().fold(0u64, |acc, p| acc | p.as_u64())
+    }
+}
+
+/// Memory object mapping flags
+#[repr(u64)]
+#[derive(Debug, Copy, Clone)]
+pub enum MemObjMapFlags {
+    None = 0,
+    Fixed = 1 << 0,  // Map at exact address
+}
+
+impl MemObjMapFlags {
+    pub fn as_u64(self) -> u64 {
+        self as u64
+    }
+}
+
+/// Create an empty process with no mappings or threads
+pub fn sys_process_create_empty() -> Result<Handle, SyscallError> {
+    let ret = raw_syscall(
+        SYS_PROCESS_CREATE_EMPTY,
+        0,
+        0,
+        0,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|handle_value| Handle(handle_value as u64))
+}
+
+/// Create a memory object with the given size and permissions
+pub fn sys_memobj_create(size: usize, perms: u64) -> Result<Handle, SyscallError> {
+    let ret = raw_syscall(
+        SYS_MEMOBJ_CREATE,
+        size,
+        perms as usize,
+        0,
+        0,
+        0,
+    );
+    decode_ret(ret).map(|handle_value| Handle(handle_value as u64))
+}
+
+/// Map a memory object into a process's address space
+/// # Returns Virtual address where the memory was mapped
+pub fn sys_map(
+    process: Handle,
+    memobj: Handle,
+    vaddr_hint: Option<u64>,
+    perms: MemObjPerms,
+    flags: MemObjMapFlags,
+) -> Result<usize, SyscallError> {
+    let ret = raw_syscall(
+        SYS_MAP,
+        process.0 as usize,
+        memobj.0 as usize,
+        vaddr_hint.unwrap_or(0) as usize,
+        perms.as_u64() as usize,
+        flags.as_u64() as usize,
+    );
+    decode_ret(ret)
+}
+
+/// Copy data from current process to target process
+pub fn sys_copy_to(
+    process: Handle,
+    dst: usize,
+    src: *const u8,
+    size: usize,
+) -> Result<(), SyscallError> {
+    let ret = raw_syscall(
+        SYS_COPY_TO,
+        process.0 as usize,
+        dst,
+        src as usize,
+        size,
+        0,
+    );
+    decode_ret(ret).map(|_| ())
+}
+
+/// Start a process by creating its first thread
+pub fn sys_start(process: Handle, entry: usize) -> Result<(), SyscallError> {
+    let ret = raw_syscall(
+        SYS_START,
+        process.0 as usize,
+        entry,
+        0,
+        0,
+        0,
+    );
     decode_ret(ret).map(|_| ())
 }
