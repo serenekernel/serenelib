@@ -42,7 +42,10 @@ const SYS_MAP: usize = 19;
 const SYS_COPY_TO: usize = 20;
 
 const SYS_CAP_PORT_GRANT: usize = 32;
+
+// @note: these ones will HOPEFULLY be temporary
 const SYS_CAP_IPC_DISCOVERY: usize = 33;
+const SYS_CAP_INITRAMFS: usize = 34;
 
 const SYS_WAIT_FOR: usize = 48;
 
@@ -84,6 +87,18 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
 pub fn sys_cap_ipc_discovery() -> Result<Handle, SyscallError> {
     raw_syscall(
         SYS_CAP_IPC_DISCOVERY,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ).map(|handle_value| Handle(handle_value as u64))
+}
+
+// @maybetemp
+pub fn sys_cap_initramfs() -> Result<Handle, SyscallError> {
+    raw_syscall(
+        SYS_CAP_INITRAMFS,
         0,
         0,
         0,
