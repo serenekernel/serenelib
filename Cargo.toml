@@ -20,3 +20,8 @@ panic = "abort"
 codegen-units = 1
 lto = false
 strip = false
+
+[lib]
+name = "serenelib"
+test = false
+bench = false
