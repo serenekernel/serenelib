@@ -55,6 +55,9 @@ const SYS_ENDPOINT_SEND: usize = 66;
 const SYS_ENDPOINT_RECEIVE: usize = 67;
 const SYS_ENDPOINT_FREE_MESSAGE: usize = 68;
 
+const SYS_MEM_ALLOC: usize = 128;
+const SYS_MEM_FREE: usize = 129;
+
 #[repr(isize)]
 #[derive(Debug, Copy, Clone)]
 pub enum SyscallError {
@@ -269,6 +272,30 @@ pub fn sys_start(process: Handle, entry: usize) -> Result<(), SyscallError> {
         SYS_START,
         process.0 as usize,
         entry,
+        0,
+        0,
+        0,
+    ).map(|_| ())
+}
+
+/// Allocate memory from the kernel
+pub fn sys_mem_alloc(size: usize, align: usize, perms: MemObjPerms) -> Result<usize, SyscallError> {
+    raw_syscall(
+        SYS_MEM_ALLOC,
+        size,
+        align,
+        perms.bits() as usize,
+        0,
+        0
+    )
+}
+
+/// Free memory previously allocated with `sys_mem_alloc`
+pub fn sys_mem_free(ptr: usize) -> Result<(), SyscallError> {
+    raw_syscall(
+        SYS_MEM_FREE,
+        ptr,
+        0,
         0,
         0,
         0,
