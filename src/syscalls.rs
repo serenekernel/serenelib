@@ -96,7 +96,7 @@ pub fn sys_cap_ipc_discovery() -> Result<Handle, SyscallError> {
 }
 
 // @maybetemp
-pub fn sys_cap_initramfs() -> Result<Handle, SyscallError> {
+pub fn sys_cap_initramfs() -> Result<u64, SyscallError> {
     raw_syscall(
         SYS_CAP_INITRAMFS,
         0,
@@ -104,7 +104,7 @@ pub fn sys_cap_initramfs() -> Result<Handle, SyscallError> {
         0,
         0,
         0,
-    ).map(|handle_value| Handle(handle_value as u64))
+    ).map(|handle_value| handle_value as u64)
 }
 
 pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
