@@ -4,19 +4,20 @@ use bitflags::bitflags;
 
 #[inline(always)]
 #[doc(hidden)]
-pub fn raw_syscall(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize) -> Result<usize, SyscallError> {
+pub fn raw_syscall(syscall_nr: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize, arg6: usize) -> Result<usize, SyscallError> {
     let return_value: u64;
     let is_error: u64;
     
     unsafe {
         asm!(
             "syscall",
-            in("rdi") a0,
-            in("rsi") a1,
-            in("rdx") a2,
-            in("r10") a3,
-            in("r8")  a4,
-            in("r9")  a5,
+            in("rax") syscall_nr,
+            in("rdi") arg1,
+            in("rsi") arg2,
+            in("rdx") arg3,
+            in("r10") arg4,
+            in("r8")  arg5,
+            in("r9")  arg6,
             lateout("rax") return_value,
             lateout("rdx") is_error,
             lateout("rcx") _,
@@ -71,7 +72,7 @@ pub enum SyscallError {
 }
 
 pub fn sys_exit(code: usize) -> ! {
-    let _ = raw_syscall(SYS_EXIT, code, 0, 0, 0, 0);
+    let _ = raw_syscall(SYS_EXIT, code, 0, 0, 0, 0, 0);
     loop {}
 }
 
@@ -83,6 +84,7 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
         0,
         0,
         0,
+        0,
     ).map(|_| ())
 }
 
@@ -90,6 +92,7 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
 pub fn sys_cap_ipc_discovery() -> Result<Handle, SyscallError> {
     raw_syscall(
         SYS_CAP_IPC_DISCOVERY,
+        0,
         0,
         0,
         0,
@@ -107,6 +110,7 @@ pub fn sys_cap_initramfs() -> Result<u64, SyscallError> {
         0,
         0,
         0,
+        0,
     ).map(|handle_value| handle_value as u64)
 }
 
@@ -118,22 +122,24 @@ pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
         0,
         0,
         0,
+        0,
     ).map(|handle_value| Handle(handle_value as u64))
 }
 
 pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
-    raw_syscall(SYS_ENDPOINT_DESTROY, handle.0 as usize, 0, 0, 0, 0).map(|_| ())
+    raw_syscall(SYS_ENDPOINT_DESTROY, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
 }
 
 /// Send a message to an endpoint.
 /// `payload` is the message payload to send. The payload is copied into kernel memory.
-pub fn sys_endpoint_send(handle: Handle, payload: &[u8]) -> Result<(), SyscallError> {
+pub fn sys_endpoint_send(handle: Handle, payload: &[u8], handles: &[Handle]) -> Result<(), SyscallError> {
     raw_syscall(
         SYS_ENDPOINT_SEND,
         handle.0 as usize,
         payload.as_ptr() as usize,
         payload.len(),
-        0,
+        handles.as_ptr() as usize,
+        handles.len(),
         0,
     ).map(|_| ())
 }
@@ -152,6 +158,7 @@ pub fn sys_endpoint_receive(
     raw_syscall(
         SYS_ENDPOINT_RECEIVE,
         handle.0 as usize,
+        0,
         0,
         0,
         0,
@@ -179,12 +186,13 @@ pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Resul
         0,
         0,
         0,
+        0,
     ).map(|_| ())
 }
 
 /// Wait for a handle to become ready.
 pub fn sys_wait_for(handle: Handle) -> Result<(), SyscallError> {
-    raw_syscall(SYS_WAIT_FOR, handle.0 as usize, 0, 0, 0, 0).map(|_| ())
+    raw_syscall(SYS_WAIT_FOR, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
 }
 
 bitflags! {
@@ -215,6 +223,7 @@ pub fn sys_process_create_empty() -> Result<Handle, SyscallError> {
         0,
         0,
         0,
+        0,
     ).map(|handle_value| Handle(handle_value as u64))
 }
 
@@ -224,6 +233,7 @@ pub fn sys_memobj_create(size: usize, perms: MemObjPerms) -> Result<Handle, Sysc
         SYS_MEMOBJ_CREATE,
         size,
         perms.bits() as usize,
+        0,
         0,
         0,
         0,
@@ -246,6 +256,7 @@ pub fn sys_map(
         vaddr_hint.unwrap_or(0) as usize,
         perms.bits() as usize,
         flags.bits() as usize,
+        0,
     )
 }
 
@@ -263,6 +274,7 @@ pub fn sys_copy_to(
         src as usize,
         size,
         0,
+        0,
     ).map(|_| ())
 }
 
@@ -272,6 +284,7 @@ pub fn sys_start(process: Handle, entry: usize) -> Result<(), SyscallError> {
         SYS_START,
         process.0 as usize,
         entry,
+        0,
         0,
         0,
         0,
@@ -286,6 +299,7 @@ pub fn sys_mem_alloc(size: usize, align: usize, perms: MemObjPerms) -> Result<us
         align,
         perms.bits() as usize,
         0,
+        0,
         0
     )
 }
@@ -295,6 +309,7 @@ pub fn sys_mem_free(ptr: usize) -> Result<(), SyscallError> {
     raw_syscall(
         SYS_MEM_FREE,
         ptr,
+        0,
         0,
         0,
         0,
