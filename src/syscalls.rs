@@ -132,14 +132,14 @@ pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
 
 /// Send a message to an endpoint.
 /// `payload` is the message payload to send. The payload is copied into kernel memory.
-pub fn sys_endpoint_send(handle: Handle, payload: &[u8], handles: &[Handle]) -> Result<(), SyscallError> {
+pub fn sys_endpoint_send(handle: Handle, payload: &[u8], reply_handle: Handle) -> Result<(), SyscallError> {
     raw_syscall(
         SYS_ENDPOINT_SEND,
         handle.0 as usize,
         payload.as_ptr() as usize,
         payload.len(),
-        handles.as_ptr() as usize,
-        handles.len(),
+        reply_handle.0 as usize,
+        0,
         0,
     ).map(|_| ())
 }
