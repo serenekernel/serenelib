@@ -51,10 +51,14 @@ const SYS_CAP_INITRAMFS: usize = 34;
 const SYS_WAIT_FOR: usize = 48;
 
 const SYS_ENDPOINT_CREATE: usize = 64;
-const SYS_ENDPOINT_DESTROY: usize = 65;
 const SYS_ENDPOINT_SEND: usize = 66;
 const SYS_ENDPOINT_RECEIVE: usize = 67;
 const SYS_ENDPOINT_FREE_MESSAGE: usize = 68;
+
+const SYS_HANDLE_DUP: usize = 80;
+const SYS_HANDLE_CLOSE: usize = 81;
+const SYS_HANDLE_GET_OWNER: usize = 82;
+const SYS_HANDLE_SET_OWNER: usize = 83;
 
 const SYS_MEM_ALLOC: usize = 128;
 const SYS_MEM_FREE: usize = 129;
@@ -126,10 +130,6 @@ pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
     ).map(|handle_value| Handle(handle_value as u64))
 }
 
-pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
-    raw_syscall(SYS_ENDPOINT_DESTROY, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
-}
-
 /// Send a message to an endpoint.
 /// `payload` is the message payload to send. The payload is copied into kernel memory.
 pub fn sys_endpoint_send(handle: Handle, payload: &[u8], handles: &[Handle]) -> Result<(), SyscallError> {
@@ -188,6 +188,29 @@ pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Resul
         0,
         0,
     ).map(|_| ())
+}
+
+pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
+    raw_syscall(SYS_ENDPOINT_CREATE + 1, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
+}
+
+pub fn sys_handle_dup(handle: &Handle) -> Result<Handle, SyscallError> {
+    raw_syscall(SYS_HANDLE_DUP, handle.0 as usize, 0, 0, 0, 0, 0)
+        .map(|handle_value| Handle(handle_value as u64))
+}
+
+pub fn sys_handle_close(handle: Handle) -> Result<(), SyscallError> {
+    raw_syscall(SYS_HANDLE_CLOSE, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
+}
+
+pub fn sys_handle_get_owner(handle: &Handle) -> Result<u64, SyscallError> {
+    raw_syscall(SYS_HANDLE_GET_OWNER, handle.0 as usize, 0, 0, 0, 0, 0)
+        .map(|handle_value| handle_value as u64)
+}
+
+pub fn sys_handle_set_owner(handle: Handle, new_owner: u64) -> Result<(), SyscallError> {
+    raw_syscall(SYS_HANDLE_SET_OWNER, handle.0 as usize, new_owner as usize, 0, 0, 0, 0)
+        .map(|_| ())
 }
 
 /// Wait for a handle to become ready.
