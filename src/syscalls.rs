@@ -54,6 +54,7 @@ const SYS_ENDPOINT_CREATE: usize = 64;
 const SYS_ENDPOINT_SEND: usize = 66;
 const SYS_ENDPOINT_RECEIVE: usize = 67;
 const SYS_ENDPOINT_FREE_MESSAGE: usize = 68;
+const SYS_ENDPOINT_GET_OWNER: usize = 69;
 
 const SYS_HANDLE_DUP: usize = 80;
 const SYS_HANDLE_CLOSE: usize = 81;
@@ -205,6 +206,11 @@ pub fn sys_handle_close(handle: Handle) -> Result<(), SyscallError> {
 
 pub fn sys_handle_get_owner(handle: &Handle) -> Result<u64, SyscallError> {
     raw_syscall(SYS_HANDLE_GET_OWNER, handle.0 as usize, 0, 0, 0, 0, 0)
+        .map(|handle_value| handle_value as u64)
+}
+
+pub fn sys_endpoint_get_owner(handle: &Handle) -> Result<u64, SyscallError> {
+    raw_syscall(SYS_ENDPOINT_GET_OWNER, handle.0 as usize, 0, 0, 0, 0, 0)
         .map(|handle_value| handle_value as u64)
 }
 
