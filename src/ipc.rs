@@ -3,9 +3,8 @@ pub struct Handle(pub u64);
 
 #[repr(C)]
 pub struct IpcMessageHeader {
-    pub length: u32,
-    pub message_type: u16,
-    pub flags: u16,
+    pub length: u32,   
+    pub sender_pid: u32,
     pub reply_handle: u64,
 }
 
