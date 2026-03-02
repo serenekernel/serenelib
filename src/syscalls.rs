@@ -41,6 +41,7 @@ const SYS_START: usize = 17;
 const SYS_MEMOBJ_CREATE: usize = 18;
 const SYS_MAP: usize = 19;
 const SYS_COPY_TO: usize = 20;
+const SYS_PROCESS_THREAD_CREATE: usize = 21;
 
 const SYS_CAP_PORT_GRANT: usize = 32;
 
@@ -269,6 +270,18 @@ pub fn sys_memobj_create(size: usize, perms: MemObjPerms) -> Result<Handle, Sysc
     ).map(|handle_value| Handle(handle_value as u64))
 }
 
+pub fn sys_process_thread_create(process: Handle, stack: usize) -> Result<Handle, SyscallError> {
+    raw_syscall(
+        SYS_PROCESS_THREAD_CREATE,
+        process.0 as usize,
+        stack,
+        0,
+        0,
+        0,
+        0,
+    ).map(|handle_value| Handle(handle_value as u64))
+}
+
 /// Map a memory object into a process's address space
 /// # Returns Virtual address where the memory was mapped
 pub fn sys_map(
@@ -307,12 +320,12 @@ pub fn sys_copy_to(
     ).map(|_| ())
 }
 
-/// Start a process by creating its first thread
-pub fn sys_start(process: Handle, entry: usize) -> Result<(), SyscallError> {
+/// Start a thread by creating its first thread
+pub fn sys_start(thread: Handle, stack: usize) -> Result<(), SyscallError> {
     raw_syscall(
         SYS_START,
-        process.0 as usize,
-        entry,
+        thread.0 as usize,
+        stack,
         0,
         0,
         0,
