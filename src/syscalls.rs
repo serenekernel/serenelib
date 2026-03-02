@@ -270,12 +270,12 @@ pub fn sys_memobj_create(size: usize, perms: MemObjPerms) -> Result<Handle, Sysc
     ).map(|handle_value| Handle(handle_value as u64))
 }
 
-pub fn sys_process_thread_create(process: Handle, stack: usize) -> Result<Handle, SyscallError> {
+pub fn sys_process_thread_create(process: Handle, entry: usize, stack: usize) -> Result<Handle, SyscallError> {
     raw_syscall(
         SYS_PROCESS_THREAD_CREATE,
         process.0 as usize,
+        entry,
         stack,
-        0,
         0,
         0,
         0,
@@ -321,11 +321,11 @@ pub fn sys_copy_to(
 }
 
 /// Start a thread by creating its first thread
-pub fn sys_start(thread: Handle, stack: usize) -> Result<(), SyscallError> {
+pub fn sys_start(thread: Handle) -> Result<(), SyscallError> {
     raw_syscall(
         SYS_START,
         thread.0 as usize,
-        stack,
+        0,
         0,
         0,
         0,
