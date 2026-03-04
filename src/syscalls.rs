@@ -42,6 +42,7 @@ const SYS_MEMOBJ_CREATE: usize = 18;
 const SYS_MAP: usize = 19;
 const SYS_COPY_TO: usize = 20;
 const SYS_PROCESS_THREAD_CREATE: usize = 21;
+const SYS_PROCESS_GET_PID: usize = 22;
 
 const SYS_CAP_PORT_GRANT: usize = 32;
 
@@ -280,6 +281,30 @@ pub fn sys_process_thread_create(process: Handle, entry: usize, stack: usize) ->
         0,
         0,
     ).map(|handle_value| Handle(handle_value as u64))
+}
+
+pub fn sys_process_get_self_pid() -> Result<u64, SyscallError> {
+    raw_syscall(
+        SYS_PROCESS_GET_PID,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ).map(|pid_value| pid_value as u64)
+}
+
+pub fn sys_process_get_pid(process: Handle) -> Result<u64, SyscallError> {
+    raw_syscall(
+        SYS_PROCESS_GET_PID,
+        process.0 as usize,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ).map(|pid_value| pid_value as u64)
 }
 
 /// Map a memory object into a process's address space
