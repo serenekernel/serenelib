@@ -47,12 +47,12 @@ const SYS_PROCESS_GET_PID: usize = 22;
 const SYS_CAP_PORT_GRANT: usize = 32;
 
 // @note: these ones will HOPEFULLY be temporary
-const SYS_CAP_IPC_DISCOVERY: usize = 33;
 const SYS_CAP_INITRAMFS: usize = 34;
 
 const SYS_WAIT_FOR: usize = 48;
 
 const SYS_ENDPOINT_CREATE: usize = 64;
+const SYS_ENDPOINT_DESTROY: usize = 64;
 const SYS_ENDPOINT_SEND: usize = 66;
 const SYS_ENDPOINT_RECEIVE: usize = 67;
 const SYS_ENDPOINT_FREE_MESSAGE: usize = 68;
@@ -93,19 +93,6 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
         0,
         0,
     ).map(|_| ())
-}
-
-// @maybetemp
-pub fn sys_cap_ipc_discovery() -> Result<Handle, SyscallError> {
-    raw_syscall(
-        SYS_CAP_IPC_DISCOVERY,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-    ).map(|handle_value| Handle(handle_value as u64))
 }
 
 // @maybetemp
@@ -194,10 +181,15 @@ pub unsafe fn sys_endpoint_free_message(message: *mut IpcMessageHeader) -> Resul
 }
 
 pub fn sys_endpoint_destroy(handle: Handle) -> Result<(), SyscallError> {
-    raw_syscall(SYS_ENDPOINT_CREATE + 1, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
+    raw_syscall(SYS_ENDPOINT_DESTROY, handle.0 as usize, 0, 0, 0, 0, 0).map(|_| ())
 }
 
-pub fn sys_handle_dup(handle: &Handle) -> Result<Handle, SyscallError> {
+pub fn sys_handle_dup_for(handle: &Handle, new_owner_pid: u64) -> Result<Handle, SyscallError> {
+    raw_syscall(SYS_HANDLE_DUP, handle.0 as usize, new_owner_pid as usize, 0, 0, 0, 0)
+        .map(|handle_value| Handle(handle_value as u64))
+}
+
+pub fn sys_handle_dup(handle: &Handle, ) -> Result<Handle, SyscallError> {
     raw_syscall(SYS_HANDLE_DUP, handle.0 as usize, 0, 0, 0, 0, 0)
         .map(|handle_value| Handle(handle_value as u64))
 }
