@@ -16,8 +16,6 @@ macro_rules! serene_entry {
             extern crate alloc;
             use alloc::vec::Vec;
             
-            sys_cap_port_grant(0xe9, 1).expect("sys_cap_port_grant failed");
-
             let stack_ptr = stack as *mut u64;
             let argc = unsafe { *stack_ptr.offset(0) } as usize;
 

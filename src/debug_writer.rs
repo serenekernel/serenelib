@@ -3,18 +3,13 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use x86_64::instructions::port::Port;
 
+use crate::syscalls::sys_msg;
+
 pub struct DebugWriter;
 
 impl DebugWriter {
-    pub fn write_byte(&mut self, byte: u8) {
-        unsafe {
-            Port::new(0xe9).write(byte);
-        }
-    }
     pub fn write_string(&mut self, s: &str) {
-        for byte in s.bytes() {
-            self.write_byte(byte);
-        }
+        sys_msg(s.as_bytes()).expect("sys_msg failed");
     }
 }
 

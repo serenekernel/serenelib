@@ -48,6 +48,7 @@ const SYS_CAP_PORT_GRANT: usize = 32;
 
 // @note: these ones will HOPEFULLY be temporary
 const SYS_CAP_INITRAMFS: usize = 34;
+const SYS_MSG: usize = 35;
 
 const SYS_WAIT_FOR: usize = 48;
 
@@ -106,6 +107,18 @@ pub fn sys_cap_initramfs() -> Result<u64, SyscallError> {
         0,
         0,
     ).map(|handle_value| handle_value as u64)
+}
+
+pub fn sys_msg(msg: &[u8]) -> Result<(), SyscallError> {
+    raw_syscall(
+        SYS_MSG,
+        msg.as_ptr() as usize,
+        msg.len(),
+        0,
+        0,
+        0,
+        0,
+    ).map(|_| ())
 }
 
 pub fn sys_endpoint_create() -> Result<Handle, SyscallError> {
