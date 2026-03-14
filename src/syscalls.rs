@@ -49,6 +49,7 @@ const SYS_CAP_PORT_GRANT: usize = 32;
 // @note: these ones will HOPEFULLY be temporary
 const SYS_CAP_INITRAMFS: usize = 34;
 const SYS_MSG: usize = 35;
+const SYS_CAP_MAP_ACPI_TABLES: usize = 36;
 
 const SYS_WAIT_FOR: usize = 48;
 
@@ -100,6 +101,18 @@ pub fn sys_cap_port_grant(start_port: u16, number_of_ports: u16) -> Result<(), S
 pub fn sys_cap_initramfs() -> Result<u64, SyscallError> {
     raw_syscall(
         SYS_CAP_INITRAMFS,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ).map(|handle_value| handle_value as u64)
+}
+
+pub fn sys_cap_map_acpi_tables() -> Result<u64, SyscallError> {
+    raw_syscall(
+        SYS_CAP_MAP_ACPI_TABLES,
         0,
         0,
         0,
